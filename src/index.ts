@@ -3,7 +3,7 @@ import { getResolver } from "key-did-resolver";
 import { Ed25519Provider } from "key-did-provider-ed25519";
 import CeramicClient from "@ceramicnetwork/http-client";
 import { TileDocument } from "@ceramicnetwork/stream-tile";
-import { StreamID } from "@ceramicnetwork/streamid";
+import { StreamID, CommitID } from "@ceramicnetwork/streamid";
 const API_URL = "https://ceramic-clay.3boxlabs.com";
 
 async function resolveDID(didKey: string) {
@@ -20,6 +20,37 @@ async function createDocument(ceramic: CeramicClient, content: any) {
   const doc = await TileDocument.create(ceramic, content);
   // The stream ID of the created document can then be accessed as the `id` property
   return doc.id;
+}
+
+async function createDocumentWithSchema(
+  ceramic: CeramicClient,
+  content: any,
+  schemaID: CommitID
+) {
+  // The following call will fail if the Ceramic instance does not have an authenticated DID
+  const doc = await TileDocument.create(ceramic, content, { schema: schemaID });
+  // The stream ID of the created document can then be accessed as the `id` property
+  return doc.id;
+}
+
+// This function will create the schema document and return the commit ID of the schema,
+// providing an immutable reference to the created version of the schema
+async function createSchemaDocument(ceramic: CeramicClient) {
+  // The following call will fail if the Ceramic instance does not have an authenticated DID
+  const doc = await TileDocument.create(ceramic, {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "MySchema",
+    type: "object",
+    properties: {
+      name: {
+        type: "string",
+        maxLength: 150,
+      },
+    },
+    required: ["name"],
+  });
+  // The stream ID of the created document can then be accessed as the `id` property
+  return doc.commitId;
 }
 
 async function loadDocument(ceramic: CeramicClient, id: StreamID) {
@@ -144,5 +175,16 @@ const main = async () => {
   const notAuthCeramic = createCeramicClient();
   const doc = await loadDocument(notAuthCeramic, documentId);
   console.log("doc content:", doc.content);
+
+  // let's create a schema then a document that must respect schema specification
+  const schemaID = await createSchemaDocument(ceramic);
+  const docID = await createDocumentWithSchema(
+    ceramic,
+    { name: "Alice" },
+    schemaID
+  );
+  console.log("docId:  ", docID);
+  const docWithSchema = await loadDocument(notAuthCeramic, docID);
+  console.log("doc content:", docWithSchema.content);
 };
 main();
