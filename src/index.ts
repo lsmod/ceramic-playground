@@ -2,6 +2,7 @@ import { DID } from "dids";
 import { getResolver } from "key-did-resolver";
 import { Ed25519Provider } from "key-did-provider-ed25519";
 import CeramicClient from "@ceramicnetwork/http-client";
+import { DIDDataStore } from "@glazed/did-datastore";
 import { TileDocument } from "@ceramicnetwork/stream-tile";
 import { StreamID, CommitID } from "@ceramicnetwork/streamid";
 const API_URL = "https://ceramic-clay.3boxlabs.com";
@@ -186,5 +187,49 @@ const main = async () => {
   console.log("docId:  ", docID);
   const docWithSchema = await loadDocument(notAuthCeramic, docID);
   console.log("doc content:", docWithSchema.content);
+
+  // let's use dataStore to write an read data associate with did
+  ceramic.did = otherDid;
+  // see the following link to learn how to public a model
+  // https://developers.ceramic.network/tools/glaze/development/
+  const publishedModel = {
+    definitions: {
+      basicProfile:
+        "kjzl6cwe1jw145cjbeko9kil8g9bxszjhyde21ob8epxuxkaon1izyqsu8wgcic",
+    },
+    schemas: {
+      BasicProfile:
+        "ceramic://k3y52l7qbv1frxt706gqfzmq6cbqdkptzk8uudaryhlkf6ly9vx21hqu4r6k1jqio",
+    },
+    tiles: {},
+  };
+  const dataStore = new DIDDataStore({ ceramic, model: publishedModel });
+
+  const basicProfileStreamID = await dataStore.set("basicProfile", {
+    name: "totoProfile",
+  });
+  console.log("basicProfileStreamID:", basicProfileStreamID);
+  // let's read form basicProfile:
+  const basicProfileContent = await dataStore.get("basicProfile", otherDid.id);
+  console.log("basicProfileContent: ", basicProfileContent);
+
+  const publishedModel2 = {
+    definitions: {
+      trustOne:
+        "kjzl6cwe1jw14bex13psnlrbx25dlsev4qwtycnghn0kgk23bdv1socsx7re5fs",
+    },
+    schemas: {
+      TrustOne:
+        "ceramic://k3y52l7qbv1fry1vbhbvqsbbxnrw3jx3f0v7c8zkem022eck1kgsotuve8g9dx5a8",
+    },
+    tiles: {},
+  };
+  const dataStore2 = new DIDDataStore({ ceramic, model: publishedModel2 });
+  const trustOneStreamID = await dataStore2.set("trustOne", {
+    trust: "toto",
+  });
+  console.log("trustOneStreamID:", trustOneStreamID);
+  const trustContent = await dataStore2.get("trustOne", otherDid.id);
+  console.log("trust: ", trustContent);
 };
 main();
