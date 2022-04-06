@@ -1,5 +1,6 @@
 # Playing with ceramic
 
+**This is a dummy repo to backup my learning experience with ceramic**
 What's I have experiment so far:
 
 ## using DIDs:
